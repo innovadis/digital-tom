@@ -378,9 +378,37 @@ export default {
   position: absolute;
   bottom: 0;
 
+  &:after {
+    content: '';
+    height: 300px;
+    width: 100%;
+    background: linear-gradient(to bottom, $inno-blue-dark 30%, transparent 70%);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+  }
+
   p {
     color: white;
-    font-size: 12px;
+    font-size: 16px;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+    height: 10px;
+
+    @for $i from 1 through 100 {
+      &:nth-last-child(n+#{$i}) {
+        opacity: 1 - 0.2 * $i;
+        transform-origin: 50% 100%;
+        transform: perspective(100px) rotateX(25deg) scale(0.8);
+      }
+
+      &:last-child {
+        opacity: 1;
+        transform: none;
+        font-size: 20px;
+        line-height: 14px;
+      }
+    }
   }
 }
 
