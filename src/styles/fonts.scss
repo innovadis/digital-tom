@@ -1,0 +1,29 @@
+@import './variables';
+
+span,
+div,
+b,
+i,
+li,
+input,
+textarea,
+p {
+  font-family: 'Open Sans', sans-serif;
+  color: $gray3;
+  font-size: 18px;
+  letter-spacing: 0;
+  // line-height: 26px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Bitter', sans-serif;
+  color: $gray3;
+  letter-spacing: 0;
+  margin: 0;
+  font-weight: 700;
+}

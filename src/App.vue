@@ -9,12 +9,12 @@ export default {
   name: 'app',
 
   mounted() {
-    bubbly({
-      blur: 2,
-      colorStart: '#0029a8',
-      colorStop: '#1a001a',
-      shadowColor: '#000'
-    })
+    // bubbly({
+    //   blur: 2,
+    //   colorStart: '#0029a8',
+    //   colorStop: '#1a001a',
+    //   shadowColor: '#000'
+    // })
   }
 }
 </script>
@@ -22,9 +22,12 @@ export default {
 <style lang="scss">
 @import 'src/styles/layout';
 @import 'src/styles/transition';
+@import 'src/styles/fonts';
+@import 'src/styles/variables';
 
 body {
   margin: 0;
+  background: $inno-blue-dark;
 }
 
 #app {
