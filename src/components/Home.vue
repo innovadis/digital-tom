@@ -19,7 +19,7 @@
 import axios from 'axios'
 import Wave from './Wave'
 
-const RESET_TIMEOUT = 5 * 1000
+const RESET_TIMEOUT = 30 * 1000
 
 const KEYWORDS = {
   package: ['pakket', 'pakketje', 'zending', 'brief', 'post', 'pakje', 'levering', 'brengen'],
@@ -29,15 +29,18 @@ const KEYWORDS = {
 const NAMES = [
   {
     speechRecognize: 'jurgen',
-    display: 'Jurgen van Kreij'
+    display: 'Jurgen van Kreij',
+    key: 'jurgen'
   },
   {
     speechRecognize: 'christiaan',
-    display: 'Christiaan Maks'
+    display: 'Christiaan Maks',
+    key: 'christiaan'
   },
   {
     speechRecognize: 'martijn',
-    display: 'Martijn van Tongeren'
+    display: 'Martijn van Tongeren',
+    key: 'martijn'
   }
 ]
 
@@ -110,11 +113,26 @@ export default {
       callId: null,
       animateSiri: false,
       currentMessage: null,
-      currentState: null
+      currentState: null,
+      lastRecognizedName: null
     }
   },
 
   methods: {
+    async log(type, message) {
+      if (type === 'event') {
+        await axios.post('http://localhost:3000/api/v1/log/event', {
+          message
+        })
+      } else if (type === 'speech') {
+        await axios.post('http://localhost:3000/api/v1/log/speech', {
+          speech: message
+        })
+      } else {
+        throw new Error('nyi')
+      }
+    },
+
     init() {
       this.recognition = new webkitSpeechRecognition() // eslint-disable-line
       this.recognition.continuous = true
@@ -126,6 +144,8 @@ export default {
         this.speech = new Array(...event.results).map(x => x[0].transcript.toLowerCase().trim())
 
         this.speechHistory = this.speech// this.speechHistory.concat(this.speech)
+
+        this.log('speech', this.speech)
 
         this.processSpeech()
       }
@@ -153,6 +173,8 @@ export default {
 
     setState(state, replacements) {
       this.currentState = state
+
+      this.log('event', 'state change: ' + state.key)
 
       let message = state.message
 
@@ -183,18 +205,23 @@ export default {
 
     listen() {
       this.recognition.start()
+
+      this.log('event', 'listen started')
     },
 
     stop() {
       this.recognition.abort()
 
-      // TODO send speech to api for logging
+      this.log('event', 'listen stopped')
     },
 
     delayedReset() {
+      this.log('event', 'delayed reset')
+
       setTimeout(() => {
         this.speech = []
         this.speechHistory = []
+        this.lastRecognizedName = null
 
         this.setState(STATES.IDLE)
 
@@ -228,9 +255,9 @@ export default {
           const nameIndex = NAMES.findIndex(name => this.speech.some(s => s.indexOf(name.speechRecognize) !== -1))
 
           if (nameIndex >= 0) {
-            const recognizedName = NAMES[nameIndex]
+            this.lastRecognizedName = NAMES[nameIndex]
 
-            this.setState(STATES.APPOINTMENT_CONFIRMED, [recognizedName.display])
+            this.setState(STATES.APPOINTMENT_CONFIRMED, [this.lastRecognizedName.display])
 
             this.stop()
 
@@ -298,10 +325,11 @@ export default {
     },
 
     async call() {
-      return
-      const res = await axios.post('http://localhost:3000/api/v1/phone/call')
+      const res = await axios.post('http://localhost:3000/api/v1/phone/call', {
+        name: this.lastRecognizedName.key
+      })
 
-      this.callId = res.data.callId
+      // this.callId = res.data.callId
 
       setTimeout(() => {
         this.setState(STATES.CALLING_INPROGRESS) // TODO cancel this on call success
