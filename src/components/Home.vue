@@ -6,7 +6,7 @@
 
   .wave-container
     transition(name='fade', mode='in-out')
-      wave(:animate='animateSiri', v-show='animateSiri')
+      wave(:animate='audioPlaying', v-show='audioPlaying')
 
   transition(name='fade', mode='in-out')
     .message(v-if='currentMessage') {{ currentMessage }}
@@ -23,7 +23,8 @@ function timeout (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-const RESET_TIMEOUT = 30 * 1000
+const GLOBAL_RESET_TIMEOUT = 120 * 1000
+const END_RESET_TIMEOUT = 30 * 1000
 
 const ACTION_CALL_RECEPTION = 'reception'
 
@@ -49,20 +50,13 @@ const NAMES = { // TODO from database
 const STATES = {
   IDLE: {
     key: 'IDLE',
-    message: null
-  },
-
-  AWAIT_INPUT: {
-    key: 'AWAIT_INPUT',
-    message: `Hallo, kom je voor Innovadis? Dan help ik je graag.`,
-    validResponses: {
-      positive: ['ja']
-    }
+    message: null,
+    hasAudio: false
   },
 
   AWAIT_REASON: {
     key: 'AWAIT_REASON',
-    message: 'Waarvoor komt u?',
+    message: 'Hallo, kom je voor Innovadis? Hoe kan ik je helpen?',
     validResponses: {
       package: ['pakket', 'pakketje', 'zending', 'brief', 'post', 'pakje', 'levering', 'brengen'], // TODO also from database
       appointment: ['afspraak', 'meeting', 'vergadering', 'bijeenkomst', 'presentatie', 'gesprek'] // TODO test grammar
@@ -83,12 +77,12 @@ const STATES = {
 
   CALLING_PERSON: {
     key: 'CALLING_PERSON',
-    message: 'Een moment geduld. Ik bel $0 op.'
+    message: 'Een moment geduld. Ik ga $0 voor je bellen.'
   },
 
   CALLING_RECEPTION: {
     key: 'CALLING_RECEPTION',
-    message: 'Een moment geduld aub, ik bel de receptie.' // TODO multiple versions
+    message: 'Een moment geduld alstublieft, ik bel de receptie.' // TODO multiple versions
   },
 
   CALLING_RECEPTION_RETRY: {
@@ -117,10 +111,10 @@ const STATES = {
 
   PACKAGE_ENTRY: {
     key: 'PACKAGE_ENTRY',
-    message: 'Moet er iemand nu voor naar beneden komen?', // TODO text mag iets duidelijker
+    message: 'Moet er nu meteen iemand naar beneden komen, voor bijvoorbeeld een handtekening?',
     validResponses: {
-      positive: ['ja', 'graag'],
-      negative: ['nee', 'niet nodig', 'hoeft niet']
+      positive: ['ja', 'graag', 'okay', 'goed', 'yes', 'prima'],
+      negative: ['nee', 'niet']
     }
   },
 
@@ -128,7 +122,7 @@ const STATES = {
     key: 'PACKAGE_NOACTION',
     message: `Ik breng Innovadis op de hoogte. U mag het achterlaten op de balie.
 
-      Bedankt & tot ziens`,
+      Tot ziens`,
     timeout: 10 * 1000
   },
 
@@ -152,7 +146,7 @@ export default {
       speech: [],
       recognition: null,
       callId: null,
-      animateSiri: false,
+      audioPlaying: false,
       currentMessage: null,
       currentState: null,
       lastRecognizedName: null,
@@ -199,24 +193,30 @@ export default {
         this.processSpeech()
       }
 
-      this.recognition.onend = () => {
-        this.animateSiri = false
-      }
-
       this.recognition.onspeechstart = (event) => {
-        this.setState(STATES.AWAIT_INPUT)
+        if (this.currentState === STATES.IDLE) {
+          this.setState(STATES.AWAIT_REASON)
+        }
       }
     },
 
-    playAudio (path) {
-      this.animateSiri = true
+    playAudio (state) {
+      if (state.hasAudio === false) return
+
+      this.audioPlaying = true
+
+      const path = '/static/voice/dewi-' + state.key + '.m4a'
 
       const audio = new Audio(path)
 
       audio.play()
 
+      this.stop() // Don't listen to speech while audio is playing because voice recognition will pick up the audio
+
       audio.onended = () => {
-        this.animateSiri = false
+        this.audioPlaying = false
+
+        this.listen()
       }
     },
 
@@ -239,13 +239,13 @@ export default {
 
       this.updateMessage(message)
 
-      if (state.audioPath) {
-        this.playAudio(state.audioPath)
-      }
+      this.playAudio(state)
 
       if (state.timeout) {
         await timeout(state.timeout)
       }
+
+      this.delayedReset(GLOBAL_RESET_TIMEOUT) // Wait 2 minutes every time state changes
     },
 
     updateMessage (message) {
@@ -271,7 +271,7 @@ export default {
     },
 
     delayedReset (timeout) {
-      timeout = timeout || RESET_TIMEOUT
+      timeout = timeout || END_RESET_TIMEOUT
 
       this.log('event', 'delayed reset in ' + timeout + 'ms')
 
@@ -279,34 +279,16 @@ export default {
 
       this.resetTimeout = setTimeout(() => {
         window.location.reload()
-        // this.speech = []
-        // this.speechHistory = []
-        // this.lastRecognizedName = null
-
-        // this.setState(STATES.IDLE)
-
-        // this.listen()
       }, timeout)
     },
 
     async processSpeech () {
-      // TODO reset after 60 seconds here. Reset timer every time there is input
+      this.delayedReset(GLOBAL_RESET_TIMEOUT)
 
       switch (this.currentState.key) {
         case STATES.IDLE.key: {
           // responds to any sound from init()
 
-          break
-        }
-
-        case STATES.AWAIT_INPUT.key: {
-          // check for positive ack
-          if (STATES[this.currentState.key].validResponses.positive.some(
-            keyword =>
-              this.speech.includes(keyword)
-          )) {
-            this.setState(STATES.AWAIT_REASON)
-          }
           break
         }
 
@@ -327,6 +309,11 @@ export default {
           )) {
             this.setState(STATES.PACKAGE_ENTRY)
             break
+          }
+
+          // easter egg
+          if (this.speech.includes('goede muziek')) {
+            // TODO
           }
           break
         }
