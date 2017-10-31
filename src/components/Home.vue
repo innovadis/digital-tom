@@ -25,7 +25,9 @@ function timeout (ms) {
 
 const RESET_TIMEOUT = 30 * 1000
 
-const NAMES = {
+const ACTION_CALL_RECEPTION = 'reception'
+
+const NAMES = { // TODO from database
   jurgen: {
     speechRecognize: ['jurgen'],
     display: 'Jurgen van Kreij',
@@ -62,7 +64,7 @@ const STATES = {
     key: 'AWAIT_REASON',
     message: 'Waarvoor komt u?',
     validResponses: {
-      package: ['pakket', 'pakketje', 'zending', 'brief', 'post', 'pakje', 'levering', 'brengen'],
+      package: ['pakket', 'pakketje', 'zending', 'brief', 'post', 'pakje', 'levering', 'brengen'], // TODO also from database
       appointment: ['afspraak', 'meeting', 'vergadering', 'bijeenkomst', 'presentatie', 'gesprek'] // TODO test grammar
     }
   },
@@ -81,7 +83,7 @@ const STATES = {
 
   CALLING_PERSON: {
     key: 'CALLING_PERSON',
-    message: 'Een moment geduld. Ik ben Martijn/Jurgen op.' // TODO variable
+    message: 'Een moment geduld. Ik bel $0 op.'
   },
 
   CALLING_RECEPTION: {
@@ -91,22 +93,26 @@ const STATES = {
 
   CALLING_RECEPTION_RETRY: {
     key: 'CALLING_RECEPTION_RETRY',
-    message: 'Helaas wordt er op dit moment niet opgenomen, ik probeer het nog een keer.'
+    message: 'Helaas wordt er op dit moment niet opgenomen, ik probeer het nog een keer.',
+    timeout: 5 * 1000
   },
 
   CALLING_PERSON_FAILED: {
     key: 'CALLING_PERSON_FAILED',
-    message: 'Helaas krijg ik Jurgen/Martijn niet te pakken, ik bel nu de receptie.'
+    message: 'Helaas krijg ik $0 niet te pakken, ik bel nu de receptie.',
+    timeout: 5 * 1000
   },
 
   CALLING_RECEPTION_FAILED: {
     key: 'CALLING_RECEPTION_FAILED',
-    message: 'Helaas wordt de telefoon niet opgenomen, u kunt de lift nemen naar verdieping B4 of zelf proberen te bellen naar 053 850 7500'
+    message: 'Helaas wordt de telefoon niet opgenomen.\nU kunt de lift nemen naar verdieping B4 of zelf proberen te bellen naar 053 850 7500',
+    timeout: 10 * 1000
   },
 
   CALLING_SUCCESS: {
     key: 'CALLING_SUCCESS',
-    message: 'Gelukt, er komt iemand naar beneden.' // TODO variable name
+    message: 'Gelukt, $0 komt naar beneden.',
+    timeout: 10 * 1000
   },
 
   PACKAGE_ENTRY: {
@@ -122,14 +128,15 @@ const STATES = {
     key: 'PACKAGE_NOACTION',
     message: `Ik breng Innovadis op de hoogte. U mag het achterlaten op de balie.
 
-      Bedankt & tot ziens`
+      Bedankt & tot ziens`,
+    timeout: 10 * 1000
   },
 
   END: {
     key: 'END',
     message: `Bedankt voor het gebruiken van de Digitale Receptionist.
 
-      Mocht u op- of aanmerkingen hebben hierover, dan worden die erg gewaardeerd. Bedankt!
+      Mocht u op- of aanmerkingen hebben, geef het door aan Innovadis. Bedankt!
       `
   }
 }
@@ -139,7 +146,7 @@ export default {
     Wave
   },
 
-  data() {
+  data () {
     return {
       speechHistory: [],
       speech: [],
@@ -154,7 +161,7 @@ export default {
   },
 
   methods: {
-    async log(type, message) {
+    async log (type, message) {
       if (process.env.NODE_ENV === 'development') {
         console.log('LOG:', message)
         return
@@ -173,7 +180,7 @@ export default {
       }
     },
 
-    init() {
+    init () {
       this.recognition = new webkitSpeechRecognition() // eslint-disable-line
       this.recognition.continuous = true
       this.recognition.lang = 'nl-NL'
@@ -201,7 +208,7 @@ export default {
       }
     },
 
-    playAudio(path) {
+    playAudio (path) {
       this.animateSiri = true
 
       const audio = new Audio(path)
@@ -213,7 +220,7 @@ export default {
       }
     },
 
-    setState(state, replacements) {
+    async setState (state, replacements) {
       if (!state || !Object.keys(STATES).includes(state.key)) throw new Error('invalid state: ' + state)
 
       this.currentState = state
@@ -235,9 +242,13 @@ export default {
       if (state.audioPath) {
         this.playAudio(state.audioPath)
       }
+
+      if (state.timeout) {
+        await timeout(state.timeout)
+      }
     },
 
-    updateMessage(message) {
+    updateMessage (message) {
       if (this.currentMessage !== message) {
         this.currentMessage = null
 
@@ -247,19 +258,19 @@ export default {
       }
     },
 
-    listen() {
+    listen () {
       this.recognition.start()
 
       this.log('event', 'listen started')
     },
 
-    stop() {
+    stop () {
       this.recognition.abort()
 
       this.log('event', 'listen stopped')
     },
 
-    delayedReset(timeout) {
+    delayedReset (timeout) {
       timeout = timeout || RESET_TIMEOUT
 
       this.log('event', 'delayed reset in ' + timeout + 'ms')
@@ -278,7 +289,7 @@ export default {
       }, timeout)
     },
 
-    processSpeech() {
+    async processSpeech () {
       // TODO reset after 60 seconds here. Reset timer every time there is input
 
       switch (this.currentState.key) {
@@ -340,7 +351,7 @@ export default {
 
             this.stop()
 
-            this.call('reception')
+            this.call(ACTION_CALL_RECEPTION)
 
             break
           } else if (name) {
@@ -365,7 +376,7 @@ export default {
 
             this.stop()
 
-            this.call('reception')
+            this.call(ACTION_CALL_RECEPTION)
           } else if (STATES[this.currentState.key].validResponses.negative.some( // check for negative ack
             keyword =>
               this.speech.includes(keyword)
@@ -374,7 +385,11 @@ export default {
 
             this.stop()
 
-            // TODO send slack message (or call) that there is a package waiting
+            await axios.post('/phone/package-notification')
+
+            await timeout(10 * 1000)
+
+            this.setState(STATES.END)
 
             this.delayedReset()
           }
@@ -387,11 +402,11 @@ export default {
       }
     },
 
-    async call(target) {
+    async call (target, nextAction) {
       this.log('event', 'placing call to ' + target)
 
       const callRes = await axios.post('/phone/call', {
-        name: this.lastRecognizedName.key
+        name: target === ACTION_CALL_RECEPTION ? 'reception' : target
       })
 
       const callSid = callRes.data.callSid
@@ -411,15 +426,48 @@ export default {
         this.log('event', `got call status for sid ${callSid} with status: ${callStatus}`)
       }
 
-      console.log('end loop', callStatus)
+      if (callStatus === 'busy') {
+        if (this.currentState === STATES.CALLING_PERSON) {
+          await this.setState(STATES.CALLING_PERSON_FAILED, [this.lastRecognizedName.display])
 
-      // TODO await feedback and go to END state if succesful
+          await this.setState(STATES.CALLING_RECEPTION)
 
-      // TODO check call progress and retry again or to different number
+          this.call(ACTION_CALL_RECEPTION)
+        } else if (this.currentState === STATES.CALLING_RECEPTION) {
+          await this.setState(STATES.CALLING_RECEPTION_RETRY)
+
+          this.call(ACTION_CALL_RECEPTION)
+        } else if (this.currentState === STATES.CALLING_RECEPTION_RETRY) {
+          await this.setState(STATES.CALLING_RECEPTION_FAILED)
+
+          // send a slack notification here that digitaltom tried calling but no one answered
+          await axios.post('/phone/noanswer-notification')
+
+          await this.setState(STATES.END)
+
+          this.delayedReset()
+        }
+      } else if (callStatus === 'completed') {
+        if (this.currentState === STATES.CALLING_PERSON) {
+          await this.setState(STATES.CALLING_SUCCESS, [this.lastRecognizedName.display])
+        } else if (this.currentState === STATES.CALLING_RECEPTION) {
+          await this.setState(STATES.CALLING_SUCCESS, 'een collega')
+        } else if (this.currentState === STATES.CALLING_RECEPTION_RETRY) {
+          await this.setState(STATES.CALLING_SUCCESS, 'een collega')
+        }
+
+        await timeout(10000)
+
+        await this.setState(STATES.END)
+
+        this.delayedReset()
+      } else {
+        throw new Error('call status nyi: ' + callStatus)
+      }
     }
   },
 
-  mounted() {
+  mounted () {
     this.setState(STATES.IDLE)
 
     this.init()
