@@ -11,7 +11,7 @@
   transition(name='fade', mode='in-out')
     .message(v-if='currentMessage') {{ currentMessage }}
 
-  .speech
+  //- .speech
     p(v-for='s in speechHistory') {{ s }}
 </template>
 
@@ -131,7 +131,8 @@ const STATES = {
     message: `Bedankt voor het gebruiken van de Digitale Receptionist.
 
       Mocht u op- of aanmerkingen hebben, geef het door aan Innovadis. Bedankt!
-      `
+      `,
+    hasAudio: false
   }
 }
 
