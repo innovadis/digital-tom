@@ -156,8 +156,8 @@ export default {
 
   methods: {
     async log (type, message) {
+      console.log('LOG:', message)
       if (process.env.NODE_ENV === 'development') {
-        console.log('LOG:', message)
         return
       }
 
