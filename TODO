@@ -3,11 +3,3 @@ reset keyword
 stop keyword ? to end a call
 
 help keyword
-
-reset after END state
-
-send slack message
-
-name interpolation
-
-speech files
