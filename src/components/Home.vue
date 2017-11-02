@@ -60,7 +60,8 @@ const STATES = {
     validResponses: {
       package: ['pakket', 'pakketje', 'zending', 'brief', 'post', 'pakje', 'levering', 'brengen'], // TODO also from database
       appointment: ['afspraak', 'meeting', 'vergadering', 'bijeenkomst', 'presentatie', 'gesprek'] // TODO test grammar
-    }
+    },
+    hasAudio: false
   },
 
   APPOINTMENT_ENTRY: {
