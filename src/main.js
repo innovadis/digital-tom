@@ -5,9 +5,15 @@ import App from './App'
 import router from './router'
 import axios from 'axios'
 
-const TOKEN = process.env.TOKEN
+let TOKEN = window.localStorage.getItem('TOKEN')
 
-if (!TOKEN) throw new Error('TOKEN must be set')
+if (!TOKEN) {
+  TOKEN = window.prompt('Enter your security token')
+
+  if (!TOKEN) throw new Error('TOKEN must be set')
+
+  window.localStorage.setItem('TOKEN', TOKEN)
+}
 
 axios.defaults.headers.authorization = TOKEN
 
