@@ -23,6 +23,12 @@ function timeout (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+async function graphql (query) {
+  return axios.post('/graphql', {
+    query
+  })
+}
+
 const GLOBAL_RESET_TIMEOUT = 120 * 1000
 const END_RESET_TIMEOUT = 30 * 1000
 
@@ -157,23 +163,18 @@ export default {
   },
 
   methods: {
-    async log (type, message) {
+    log (type, message) {
       console.log('LOG:', message)
       if (process.env.NODE_ENV === 'development') {
         return
       }
 
-      if (type === 'event') {
-        await axios.post('/log/event', {
-          message
-        })
-      } else if (type === 'speech') {
-        await axios.post('/log/speech', {
-          speech: message
-        })
-      } else {
-        throw new Error('nyi')
-      }
+      graphql(`
+          mutation {
+            log(event: "${type}", message: "${message}")
+          }
+        `
+      )
     },
 
     init () {
@@ -374,7 +375,12 @@ export default {
 
             this.stop()
 
-            await axios.post('/phone/package-notification')
+            await graphql(`
+                mutation {
+                  notification(type: "package")
+                }
+              `
+            )
 
             await timeout(10 * 1000)
 
@@ -394,23 +400,34 @@ export default {
     async call (target, nextAction) {
       this.log('event', 'placing call to ' + target)
 
-      const callRes = await axios.post('/phone/call', {
-        name: target === ACTION_CALL_RECEPTION ? 'reception' : target
-      })
+      const callRes = await graphql(`
+        mutation {
+          call(name: "${target}") {
+            callSid,
+            status
+          }
+        }
+      `)
 
-      const callSid = callRes.data.callSid
+      const callSid = callRes.data.data.call.callSid
 
       const POLL_PERIOD = 5000
-      let callStatus = 'in progress'
+      let callStatus = callRes.data.data.call.status
       let msElapsed = 0
 
       while (callStatus === 'in progress' && msElapsed < 60 * 1000) {
         await timeout(POLL_PERIOD)
         msElapsed += POLL_PERIOD
 
-        const statusRes = await axios.get('/phone/status?sid=' + callSid)
+        const statusRes = await graphql(`
+          query {
+            status(callSid: "${callSid}") {
+              status
+            }
+          }
+        `)
 
-        callStatus = statusRes.data.status
+        callStatus = statusRes.data.data.status.status
 
         this.log('event', `got call status for sid ${callSid} with status: ${callStatus}`)
       }
@@ -430,7 +447,12 @@ export default {
           await this.setState(STATES.CALLING_RECEPTION_FAILED)
 
           // send a slack notification here that digitaltom tried calling but no one answered
-          await axios.post('/phone/noanswer-notification')
+          await graphql(`
+              mutation {
+                notification(type: "no answer")
+              }
+            `
+          )
 
           await this.setState(STATES.END)
 
