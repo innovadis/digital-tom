@@ -90,14 +90,12 @@ Heb je een afspraak of kom je een pakket bezorgen?`,
 
   CALLING_PERSON: {
     key: 'CALLING_PERSON',
-    message: 'Een moment geduld. Ik stuur $0 een bericht.',
-    hasAudio: false // TODO needs new audio file
+    message: 'Ik ga proberen $0 te bereiken, een moment geduld.'
   },
 
   CALLING_RECEPTION: {
     key: 'CALLING_RECEPTION',
-    message: 'Een moment geduld alstublieft, ik neem contact op met de receptie.', // TODO multiple versions
-    hasAudio: false // TODO new audio
+    message: 'Een moment geduld alstublieft, ik neem contact op met de receptie.' // TODO multiple versions
   },
 
   CALLING_RECEPTION_RETRY: {
@@ -109,8 +107,7 @@ Heb je een afspraak of kom je een pakket bezorgen?`,
   CALLING_PERSON_FAILED: {
     key: 'CALLING_PERSON_FAILED',
     message: 'Helaas krijg ik $0 niet te pakken.',
-    timeout: 5 * 1000,
-    hasAudio: false // TODO new audio
+    timeout: 5 * 1000
   },
 
   CALLING_RECEPTION_FAILED: {
