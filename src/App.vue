@@ -28,6 +28,7 @@ export default {
 body {
   margin: 0;
   background: $inno-blue-dark;
+  cursor: none;
 }
 
 #app {
