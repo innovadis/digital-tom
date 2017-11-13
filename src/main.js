@@ -7,6 +7,18 @@ import axios from 'axios'
 
 Vue.config.productionTip = false
 
+axios.interceptors.response.use(function (response) {
+  return response
+}, function (error) {
+  if (error.response.status === 401 || error.response.status === 403) { // unauthorized when token expired
+    window.localStorage.removeItem('TOKEN')
+
+    window.location.reload()
+  }
+
+  return Promise.reject(error)
+})
+
 if (process.env.NODE_ENV === 'development') {
   axios.defaults.baseURL = 'http://localhost:5000'
 } else if (process.env.NODE_ENV === 'production') {
