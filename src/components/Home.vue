@@ -2,7 +2,7 @@
 .flex.flex-justify-center.flex-align-center.full-height.flex-column
   .header
     h1.brand Innovadis
-    h3.title Digitale Receptionist
+    h3.title Digitale Receptionist Prototype
 
   .wave-container
     transition(name='fade', mode='in-out')
@@ -10,6 +10,11 @@
 
   transition(name='fade', mode='in-out')
     .message(v-if='currentMessage') {{ currentMessage }}
+
+  .help
+    span Dit is een experiment. Er kunnen dingen fout gaan. Wilt u Innovadis zelf bereiken? Bel dan naar #[b 053 850 7500]
+    br
+    span Gaat er iets fout of heeft u feedback? Laat het ons weten!
 
   //- .speech
     p(v-for='s in speechHistory') {{ s }}
@@ -62,7 +67,9 @@ const STATES = {
 
   AWAIT_REASON: {
     key: 'AWAIT_REASON',
-    message: 'Hallo, kom je voor Innovadis? Hoe kan ik je helpen?',
+    message: `Welkom bij Innovadis.
+
+Heb je een afspraak of kom je een pakket bezorgen?`,
     validResponses: {
       package: ['pakket', 'pakketje', 'zending', 'brief', 'post', 'pakje', 'levering', 'brengen'], // TODO also from database
       appointment: ['afspraak', 'meeting', 'vergadering', 'bijeenkomst', 'presentatie', 'gesprek', 'kom voor'] // TODO test grammar
@@ -79,17 +86,18 @@ const STATES = {
       [NAMES.christiaan.key]: NAMES.christiaan.speechRecognize,
       other: ['anders']
     }
-    // audioPath: '/static/voice/christiaan_afspraakmetwie.m4a'
   },
 
   CALLING_PERSON: {
     key: 'CALLING_PERSON',
-    message: 'Een moment geduld. Ik ga $0 voor je bellen.'
+    message: 'Een moment geduld. Ik stuur $0 een bericht.',
+    hasAudio: false // TODO needs new audio file
   },
 
   CALLING_RECEPTION: {
     key: 'CALLING_RECEPTION',
-    message: 'Een moment geduld alstublieft, ik bel de receptie.' // TODO multiple versions
+    message: 'Een moment geduld alstublieft, ik neem contact op met de receptie.', // TODO multiple versions
+    hasAudio: false // TODO new audio
   },
 
   CALLING_RECEPTION_RETRY: {
@@ -100,8 +108,9 @@ const STATES = {
 
   CALLING_PERSON_FAILED: {
     key: 'CALLING_PERSON_FAILED',
-    message: 'Helaas krijg ik $0 niet te pakken, ik bel nu de receptie.',
-    timeout: 5 * 1000
+    message: 'Helaas krijg ik $0 niet te pakken.',
+    timeout: 5 * 1000,
+    hasAudio: false // TODO new audio
   },
 
   CALLING_RECEPTION_FAILED: {
@@ -514,6 +523,18 @@ export default {
   .title {
     color: white;
     font-size: 32px;
+  }
+}
+
+.help {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+
+  b,
+  span {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
   }
 }
 
