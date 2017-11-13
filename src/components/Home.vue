@@ -173,14 +173,17 @@ export default {
 
   methods: {
     log (type, message) {
-      console.log('LOG:', message)
+      const logMessage = `event: "${type}", message: "${message}"`
+
+      console.log('LOG:', logMessage)
+
       if (process.env.NODE_ENV === 'development') {
         return
       }
 
       graphql(`
           mutation {
-            log(event: "${type}", message: "${message}")
+            log(${logMessage})
           }
         `
       )
@@ -242,7 +245,7 @@ export default {
       let message = state.message
 
       if (replacements) {
-        this.log('text replacements:' + replacements)
+        this.log('debug', 'text replacements: ' + replacements)
 
         for (let i = 0; i < replacements.length; i++) {
           if (message.includes('$' + i)) {
