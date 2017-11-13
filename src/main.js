@@ -10,7 +10,7 @@ Vue.config.productionTip = false
 axios.interceptors.response.use(function (response) {
   return response
 }, function (error) {
-  if (error.response.status === 401 || error.response.status === 403) { // unauthorized when token expired
+  if (error.response && (error.response.status === 401 || error.response.status === 403)) { // unauthorized when token expired
     window.localStorage.removeItem('TOKEN')
 
     window.location.reload()
