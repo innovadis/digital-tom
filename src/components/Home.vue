@@ -65,7 +65,7 @@ const STATES = {
     message: 'Hallo, kom je voor Innovadis? Hoe kan ik je helpen?',
     validResponses: {
       package: ['pakket', 'pakketje', 'zending', 'brief', 'post', 'pakje', 'levering', 'brengen'], // TODO also from database
-      appointment: ['afspraak', 'meeting', 'vergadering', 'bijeenkomst', 'presentatie', 'gesprek'] // TODO test grammar
+      appointment: ['afspraak', 'meeting', 'vergadering', 'bijeenkomst', 'presentatie', 'gesprek', 'kom voor'] // TODO test grammar
     },
     hasAudio: false
   },
@@ -233,6 +233,8 @@ export default {
       let message = state.message
 
       if (replacements) {
+        this.log('text replacements:' + replacements)
+
         for (let i = 0; i < replacements.length; i++) {
           if (message.includes('$' + i)) {
             message = message.replace('$' + i, replacements[i])
