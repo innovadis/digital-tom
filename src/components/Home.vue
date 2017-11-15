@@ -85,7 +85,8 @@ Heb je een afspraak of kom je een pakket bezorgen?`,
       [NAMES.jurgen.key]: NAMES.jurgen.speechRecognize,
       [NAMES.christiaan.key]: NAMES.christiaan.speechRecognize,
       other: ['anders']
-    }
+    },
+    hasAudio: false
   },
 
   CALLING_PERSON: {
@@ -157,6 +158,7 @@ export default {
   data () {
     return {
       initComplete: false,
+      listening: false,
       speechHistory: [],
       speech: [],
       recognition: null,
@@ -199,6 +201,8 @@ export default {
       this.recognition.maxAlternatives = 1
 
       this.recognition.onresult = (event) => {
+        if (!this.listening) return
+
         const allSpeech = new Array(...event.results).map(x => x[0].transcript.toLowerCase().trim())
 
         this.speech = allSpeech[allSpeech.length - 1]
@@ -219,9 +223,7 @@ export default {
       this.recognition.onend = (event) => {
         this.log('event', 'listen ended, re-initializing')
 
-        this.recognition.abort()
-
-        this.listen()
+        this.recognition.start()
       }
 
       this.listen()
@@ -290,7 +292,13 @@ export default {
     },
 
     listen () {
-      this.recognition.start()
+      try {
+        this.recognition.start()
+      } catch (error) {
+        console.log('ignored error: ' + error.message)
+      }
+
+      this.listening = true
 
       this.log('event', 'listen started')
     },
@@ -298,13 +306,15 @@ export default {
     stop () {
       this.recognition.abort()
 
+      this.listening = false
+
       this.log('event', 'listen stopped')
     },
 
     delayedReset (timeout) {
       timeout = timeout || END_RESET_TIMEOUT
 
-      this.log('event', 'delayed reset in ' + timeout + 'ms')
+      this.log('event', 'reset in ' + timeout + 'ms')
 
       clearTimeout(this.resetTimeout)
 
@@ -421,7 +431,7 @@ export default {
         }
 
         default:
-          throw new Error('unknown state or should not be listening during this state: ' + this.currentState.key)
+          // throw new Error('unknown state or should not be listening during this state: ' + this.currentState.key)
       }
     },
 
@@ -442,6 +452,10 @@ export default {
       const POLL_PERIOD = 5000
       let callStatus = callRes.data.data.call.status
       let msElapsed = 0
+
+      if (process.env.NODE_ENV === 'development') {
+        await timeout(POLL_PERIOD)
+      }
 
       while (callStatus === 'in progress' && msElapsed < 60 * 1000) {
         await timeout(POLL_PERIOD)
