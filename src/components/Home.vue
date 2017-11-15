@@ -156,6 +156,7 @@ export default {
 
   data () {
     return {
+      initComplete: false,
       speechHistory: [],
       speech: [],
       recognition: null,
@@ -187,6 +188,10 @@ export default {
     },
 
     init () {
+      this.log('event', 'init speech')
+
+      if (this.initComplete) return
+
       this.recognition = new webkitSpeechRecognition() // eslint-disable-line
       this.recognition.continuous = true
       this.recognition.lang = 'nl-NL'
@@ -210,6 +215,18 @@ export default {
           this.setState(STATES.AWAIT_REASON)
         }
       }
+
+      this.recognition.onend = (event) => {
+        this.log('event', 'listen ended, re-initializing')
+
+        this.recognition.abort()
+
+        this.listen()
+      }
+
+      this.listen()
+
+      this.initComplete = true
     },
 
     playAudio (state) {
@@ -494,7 +511,7 @@ export default {
 
     this.init()
 
-    this.listen()
+    // this.listen()
   }
 }
 </script>
